@@ -17,6 +17,7 @@ function KOPTContext_mt.__index:setDeviceDim(w, h) self.dev_width, self.dev_heig
 function KOPTContext_mt.__index:setDeviceDPI(dpi) self.dev_dpi = dpi end
 function KOPTContext_mt.__index:setStraighten(straighten) self.straighten = straighten end
 function KOPTContext_mt.__index:setJustification(justification) self.justification = justification end
+function KOPTContext_mt.__index:setWritingDirection(direction) self.writing_direction = direction end
 function KOPTContext_mt.__index:setMargin(margin) self.margin = margin end
 function KOPTContext_mt.__index:setZoom(zoom) self.zoom = zoom end
 function KOPTContext_mt.__index:setQuality(quality) self.quality = quality end
@@ -185,6 +186,19 @@ function KOPTContext_mt.__index:getTOCRWord(x, y, w, h, datadir, lang, ocr_type,
 	return ffi.string(word)
 end
 
+function KOPTContext_mt.__index:getPageRegions()
+	k2pdfopt.k2pdfopt_part_bmp(self)
+	local w, h = self.page_width, self.page_height
+	local regions = {}
+	for i = 0, self.pageregions.n - 1 do
+		local bmpregion = (self.pageregions.pageregion + i).bmpregion
+		table.insert(regions, {
+				x0 = bmpregion.c1/w, x1 = bmpregion.c2/w,
+				y0 = bmpregion.r1/h, y1 = bmpregion.r2/h })
+	end
+	return regions
+end
+
 function KOPTContext_mt.__index:free()
 	--[[ Don't worry about the src bitmap in context. It's freed as soon as it's
 	     been used in either reflow or autocrop. But we should take care of dst
@@ -205,6 +219,7 @@ function KOPTContext_mt.__index:free()
 	leptonica.boxaDestroy(nboxa)
 	k2pdfopt.bmp_free(self.dst)
 	k2pdfopt.wrectmaps_free(self.rectmaps)
+	k2pdfopt.pageregions_free(self.pageregions)
 end
 
 function KOPTContext_mt.__index:__gc() self:free() end
@@ -231,6 +246,7 @@ function KOPTContext.new()
 	kc.justification = -1
 	kc.read_max_width = 3000
 	kc.read_max_height = 4000
+	kc.writing_direction = 0
 	-- number values
 	kc.zoom = 1.0
 	kc.margin = 0.06
@@ -256,6 +272,7 @@ function KOPTContext.new()
 	k2pdfopt.bmp_init(kc.src)
 	k2pdfopt.bmp_init(kc.dst)
 	k2pdfopt.wrectmaps_init(kc.rectmaps)
+	k2pdfopt.pageregions_init(kc.pageregions)
 	
 	return kc
 end
